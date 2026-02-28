@@ -1,0 +1,1 @@
+# Terraform definitions - placeholder
