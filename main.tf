@@ -21,9 +21,7 @@ provider "azurerm" {
 
 provider "cloudinit" {}
 
-# ---------------------------------------------------------------------------
 # Variables
-# ---------------------------------------------------------------------------
 variable "labelPrefix" {
   description = "Your college username. This will form the beginning of various resource names."
   type        = string
@@ -47,27 +45,22 @@ variable "admin_ssh_public_key" {
   sensitive   = true
 }
 
-# ---------------------------------------------------------------------------
 # Resource Group
-# ---------------------------------------------------------------------------
 resource "azurerm_resource_group" "main" {
   name     = "${var.labelPrefix}-A05-RG"
   location = var.region
 }
 
-# ---------------------------------------------------------------------------
 # Public IP
-# ---------------------------------------------------------------------------
 resource "azurerm_public_ip" "main" {
   name                = "${var.labelPrefix}-A05-PIP"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   allocation_method   = "Static"
+  sku                 = "Standard"
 }
 
-# ---------------------------------------------------------------------------
 # Virtual Network and Subnet
-# ---------------------------------------------------------------------------
 resource "azurerm_virtual_network" "main" {
   name                = "${var.labelPrefix}-A05-VNet"
   resource_group_name = azurerm_resource_group.main.name
@@ -82,9 +75,7 @@ resource "azurerm_subnet" "main" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-# ---------------------------------------------------------------------------
 # Network Security Group (inline rules for SSH and HTTP)
-# ---------------------------------------------------------------------------
 resource "azurerm_network_security_group" "main" {
   name                = "${var.labelPrefix}-A05-NSG"
   resource_group_name = azurerm_resource_group.main.name
@@ -115,9 +106,7 @@ resource "azurerm_network_security_group" "main" {
   }
 }
 
-# ---------------------------------------------------------------------------
-# Network Interface (with Public IP)
-# ---------------------------------------------------------------------------
+# Network Interface
 resource "azurerm_network_interface" "main" {
   name                = "${var.labelPrefix}-A05-NIC"
   resource_group_name = azurerm_resource_group.main.name
@@ -131,15 +120,13 @@ resource "azurerm_network_interface" "main" {
   }
 }
 
-# Apply NSG to the NIC (web server only, not the whole subnet)
+# Apply NSG to the NIC
 resource "azurerm_network_interface_security_group_association" "main" {
   network_interface_id      = azurerm_network_interface.main.id
   network_security_group_id = azurerm_network_security_group.main.id
 }
 
-# ---------------------------------------------------------------------------
-# Cloud-init config (runs init.sh on first boot)
-# ---------------------------------------------------------------------------
+# Cloud-init config
 data "cloudinit_config" "main" {
   gzip          = true
   base64_encode = true
@@ -150,9 +137,7 @@ data "cloudinit_config" "main" {
   }
 }
 
-# ---------------------------------------------------------------------------
-# Linux VM (Ubuntu, B1s, Apache via cloud-init)
-# ---------------------------------------------------------------------------
+# Virtual Machine
 resource "azurerm_linux_virtual_machine" "main" {
   name                = "${var.labelPrefix}-A05-VM"
   resource_group_name = azurerm_resource_group.main.name
@@ -184,15 +169,11 @@ resource "azurerm_linux_virtual_machine" "main" {
   }
 }
 
-# ---------------------------------------------------------------------------
 # Outputs
-# ---------------------------------------------------------------------------
 output "resource_group_name" {
-  description = "Name of the resource group (for Azure portal inspection)."
-  value       = azurerm_resource_group.main.name
+  value = azurerm_resource_group.main.name
 }
 
 output "public_ip_address" {
-  description = "Public IP of the web server (browser and SSH)."
-  value       = azurerm_public_ip.main.ip_address
+  value = azurerm_public_ip.main.ip_address
 }
